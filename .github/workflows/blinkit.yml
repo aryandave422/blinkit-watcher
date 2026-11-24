@@ -1,0 +1,32 @@
+name: Blinkit watcher
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to run, in minutes (use 2 for a quick test)"
+        default: "2"
+  schedule:
+    - cron: "0 * * * *"   # an hourly slot; the concurrency rule below keeps only one run going
+
+# Only one run at a time. A new run waits for the current one to finish,
+# so there is almost no gap between runs.
+concurrency:
+  group: blinkit-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Run watcher
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python blinkit_watcher.py --interval 1 --max-minutes ${{ github.event.inputs.minutes || '345' }}
